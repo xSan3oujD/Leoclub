@@ -992,8 +992,6 @@ function renderUsers(container) {
 }
 
 function renderMembers(container) {
-    const users = store.data.users;
-
     const wrapper = document.createElement('div');
     wrapper.style.display = 'flex';
     wrapper.style.flexDirection = 'column';
@@ -1005,8 +1003,8 @@ function renderMembers(container) {
                 <h3 style="font-size:1.5rem; font-weight:700;">Club Members</h3>
                 <p style="color:var(--text-muted)">All registered members of LEO Club Curubis Korba</p>
             </div>
-            <div style="background:var(--primary); color:white; padding:0.75rem 1.25rem; border-radius:12px; font-weight:700;">
-                <i class="fa-solid fa-users"></i> ${users.length} Members
+            <div id="member-count-badge" style="background:var(--primary); color:white; padding:0.75rem 1.25rem; border-radius:12px; font-weight:700;">
+                <i class="fa-solid fa-users"></i> ${store.data.users.length} Members
             </div>
         </div>
 
@@ -1021,14 +1019,20 @@ function renderMembers(container) {
     container.appendChild(wrapper);
 
     const grid = document.getElementById('members-grid');
+    const countBadge = document.getElementById('member-count-badge');
 
     const updateMembersDisplay = () => {
+        // Use live data from store
+        const users = store.data.users;
         const query = document.getElementById('member-search-input').value.toLowerCase();
         const filtered = users.filter(u =>
             u.name.toLowerCase().includes(query) ||
             u.email.toLowerCase().includes(query) ||
             (u.mobile && u.mobile.includes(query))
         );
+
+        // Update member count
+        countBadge.innerHTML = `<i class="fa-solid fa-users"></i> ${users.length} Members`;
 
         if (filtered.length === 0) {
             grid.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:5rem; opacity:0.2;">
