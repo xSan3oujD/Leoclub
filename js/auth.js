@@ -25,8 +25,13 @@ export const auth = {
                 userData = userDoc.data();
                 if (isMasterAdmin && userData.role !== 'Admin') {
                     userData.role = 'Admin';
-                    await updateDoc(doc(db, "users", fbUser.email.toLowerCase()), { role: 'Admin' });
+                    await updateDoc(doc(db, "users", fbUser.email.toLowerCase()), { role: 'Admin', lastSeen: new Date().toISOString() });
+                } else {
+                    // Update last seen
+                    await updateDoc(doc(db, "users", fbUser.email.toLowerCase()), { lastSeen: new Date().toISOString() });
                 }
+                // Refresh userData to include lastSeen
+                userData.lastSeen = new Date().toISOString();
             } else {
                 userData = {
                     name: email.split('@')[0],
@@ -81,8 +86,12 @@ export const auth = {
                 userData = userDoc.data();
                 if (isMasterAdmin && userData.role !== 'Admin') {
                     userData.role = 'Admin';
-                    await updateDoc(doc(db, "users", fbUser.email.toLowerCase()), { role: 'Admin' });
+                    await updateDoc(doc(db, "users", fbUser.email.toLowerCase()), { role: 'Admin', lastSeen: new Date().toISOString() });
+                } else {
+                    // Update last seen
+                    await updateDoc(doc(db, "users", fbUser.email.toLowerCase()), { lastSeen: new Date().toISOString() });
                 }
+                userData.lastSeen = new Date().toISOString();
             } else {
                 // Check if this is the first user ever (Bootstrap Admin)
                 const usersSnap = await getDocs(collection(db, "users"));
@@ -94,8 +103,10 @@ export const auth = {
                     email: fbUser.email.toLowerCase(),
                     role: (isMasterAdmin || isFirstUser) ? 'Admin' : 'Volunteer',
                     avatar: fbUser.photoURL || (fbUser.displayName || fbUser.email).substring(0, 2).toUpperCase(),
+                    profilePicture: fbUser.photoURL || null,
                     status: 'active',
-                    permissions: {}
+                    permissions: {},
+                    lastSeen: new Date().toISOString()
                 };
                 await setDoc(doc(db, "users", fbUser.email.toLowerCase()), userData);
             }
@@ -142,7 +153,8 @@ export const auth = {
                 role: isFirstUser ? 'Admin' : 'Volunteer',
                 status: 'active',
                 avatar: name.substring(0, 2).toUpperCase(),
-                permissions: {}
+                permissions: {},
+                lastSeen: new Date().toISOString()
             };
 
             // Save to Firestore

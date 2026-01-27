@@ -20,7 +20,17 @@ document.addEventListener('DOMContentLoaded', () => {
     // Update Profile UI
     document.querySelector('.user-profile .name').textContent = currentUser.name;
     document.querySelector('.user-profile .role').textContent = currentUser.role;
-    document.querySelector('.user-profile .avatar').textContent = currentUser.avatar;
+    const avatarEl = document.querySelector('.user-profile .avatar');
+    if (currentUser.profilePicture) {
+        avatarEl.innerHTML = `<img src="${currentUser.profilePicture}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`;
+    } else {
+        avatarEl.textContent = currentUser.avatar;
+    }
+
+    // Profile Click Handler
+    document.getElementById('user-profile-section').addEventListener('click', () => {
+        window.dispatchModal('my-profile');
+    });
 
     // Logout Handlers
     document.querySelector('.logout-btn').addEventListener('click', () => {
@@ -87,7 +97,7 @@ function updateUILanguage() {
     document.getElementById('quick-add-btn').innerHTML = `<i class="fa-solid fa-plus"></i>`;
 
     // Sidebar Permissions Check
-    const pages = ['dashboard', 'stock-impact', 'stock-items', 'stock-movements', 'gallery', 'reports', 'users', 'settings'];
+    const pages = ['dashboard', 'stock-impact', 'stock-items', 'stock-movements', 'gallery', 'members', 'reports', 'users', 'settings'];
 
     pages.forEach(page => {
         const navItem = document.querySelector(`.nav-item[data-page="${page}"]`);
@@ -107,6 +117,8 @@ function updateUILanguage() {
             } else {
                 // Default restrictions for non-admins
                 if (page === 'users' || page === 'settings') visible = false;
+                // Members page is visible to all users
+                if (page === 'members') visible = true;
             }
         }
 
@@ -196,6 +208,10 @@ function renderPage(page) {
         case 'gallery':
             title.textContent = t('gallery');
             renderGallery(content);
+            break;
+        case 'members':
+            title.textContent = t('members') || 'Members';
+            renderMembers(content);
             break;
     }
 }
@@ -975,6 +991,97 @@ function renderUsers(container) {
     container.appendChild(card);
 }
 
+function renderMembers(container) {
+    const users = store.data.users;
+
+    const wrapper = document.createElement('div');
+    wrapper.style.display = 'flex';
+    wrapper.style.flexDirection = 'column';
+    wrapper.style.gap = '1.5rem';
+
+    wrapper.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div>
+                <h3 style="font-size:1.5rem; font-weight:700;">Club Members</h3>
+                <p style="color:var(--text-muted)">All registered members of LEO Club Curubis Korba</p>
+            </div>
+            <div style="background:var(--primary); color:white; padding:0.75rem 1.25rem; border-radius:12px; font-weight:700;">
+                <i class="fa-solid fa-users"></i> ${users.length} Members
+            </div>
+        </div>
+
+        <div style="position:relative;">
+            <i class="fa-solid fa-magnifying-glass" style="position:absolute; left:1rem; top:50%; transform:translateY(-50%); color:var(--text-muted);"></i>
+            <input type="text" id="member-search-input" placeholder="Search members by name or email..." 
+                   style="width:100%; padding:0.8rem 0.8rem 0.8rem 2.5rem; border:1px solid rgba(0,0,0,0.1); border-radius:12px; background:rgba(255,255,255,0.5); font-family:inherit;">
+        </div>
+
+        <div class="item-grid" id="members-grid"></div>
+    `;
+    container.appendChild(wrapper);
+
+    const grid = document.getElementById('members-grid');
+
+    const updateMembersDisplay = () => {
+        const query = document.getElementById('member-search-input').value.toLowerCase();
+        const filtered = users.filter(u =>
+            u.name.toLowerCase().includes(query) ||
+            u.email.toLowerCase().includes(query) ||
+            (u.mobile && u.mobile.includes(query))
+        );
+
+        if (filtered.length === 0) {
+            grid.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:5rem; opacity:0.2;">
+                <i class="fa-solid fa-user-slash" style="font-size:4rem; margin-bottom:1rem;"></i>
+                <p>No members found matching your search.</p>
+            </div>`;
+            return;
+        }
+
+        grid.innerHTML = filtered.map(u => {
+            const lastSeen = u.lastSeen || 'Never';
+            const mobile = u.mobile || 'Not provided';
+            const isOnline = u.lastSeen && (Date.now() - new Date(u.lastSeen).getTime() < 5 * 60 * 1000); // Online if active in last 5 minutes
+
+            return `
+            <div class="card" style="padding:1.5rem; display:flex; flex-direction:column; gap:1rem; transition: transform 0.2s; position:relative;">
+                ${isOnline ? '<div style="position:absolute; top:1rem; right:1rem; width:12px; height:12px; background:#34c759; border-radius:50%; box-shadow:0 0 0 3px rgba(52,199,89,0.2);"></div>' : ''}
+                
+                <div style="display:flex; flex-direction:column; align-items:center; gap:0.75rem;">
+                    <div style="width:80px; height:80px; background:${u.profilePicture ? 'transparent' : 'var(--primary)'}; color:white; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:1.5rem; font-weight:700; overflow:hidden; box-shadow:0 4px 12px rgba(0,0,0,0.1);">
+                        ${u.profilePicture ? `<img src="${u.profilePicture}" style="width:100%; height:100%; object-fit:cover;">` : u.avatar}
+                    </div>
+                    <div style="text-align:center;">
+                        <h4 style="font-size:1.1rem; font-weight:700; margin-bottom:0.25rem;">${u.name}</h4>
+                        <span class="badge" style="background:#f1f5f9; color:var(--text-main); font-size:0.75rem;">${u.role}</span>
+                    </div>
+                </div>
+
+                <div style="background:var(--bg-body); padding:1rem; border-radius:12px; display:flex; flex-direction:column; gap:0.75rem;">
+                    <div style="display:flex; align-items:center; gap:0.5rem; font-size:0.85rem;">
+                        <i class="fa-solid fa-envelope" style="color:var(--primary); width:20px;"></i>
+                        <span style="color:var(--text-muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${u.email}</span>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:0.5rem; font-size:0.85rem;">
+                        <i class="fa-solid fa-phone" style="color:var(--primary); width:20px;"></i>
+                        <span style="color:var(--text-muted);">${mobile}</span>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:0.5rem; font-size:0.85rem;">
+                        <i class="fa-solid fa-clock" style="color:${isOnline ? '#34c759' : 'var(--text-muted)'}; width:20px;"></i>
+                        <span style="color:var(--text-muted);">${isOnline ? 'Online now' : 'Last seen: ' + lastSeen}</span>
+                    </div>
+                </div>
+
+                ${u.status === 'active' ? '<span class="badge success" style="align-self:center;">Active</span>' : '<span class="badge danger" style="align-self:center;">Inactive</span>'}
+            </div>
+            `;
+        }).join('');
+    };
+
+    document.getElementById('member-search-input').oninput = updateMembersDisplay;
+    updateMembersDisplay();
+}
+
 // Modal System
 window.dispatchModal = (type, id = null, options = {}) => {
     let title = '';
@@ -1227,6 +1334,86 @@ window.dispatchModal = (type, id = null, options = {}) => {
                 location.reload();
             }
         };
+    } else if (type === 'my-profile') {
+        const user = currentUser;
+        title = 'My Profile';
+
+        body = `
+            <div style="display:flex; flex-direction:column; gap:1.5rem;">
+                <div style="text-align:center;">
+                    <div style="width:100px; height:100px; background:${user.profilePicture ? 'transparent' : 'var(--primary)'}; color:white; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:2rem; font-weight:700; overflow:hidden; margin:0 auto 1rem auto; box-shadow:0 4px 12px rgba(0,0,0,0.1); cursor:pointer;" onclick="document.getElementById('profile-pic-input').click()">
+                        ${user.profilePicture ? `<img src="${user.profilePicture}" id="profile-pic-preview" style="width:100%; height:100%; object-fit:cover;">` : `<span id="profile-pic-preview">${user.avatar}</span>`}
+                    </div>
+                    <input type="file" id="profile-pic-input" accept="image/*" style="display:none;" onchange="window.previewProfilePicture(this)">
+                    <p style="font-size:0.85rem; color:var(--text-muted);">Click to change profile picture</p>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Full Name</label>
+                    <input type="text" id="profile-name" class="form-input" value="${user.name}" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Email</label>
+                    <input type="email" class="form-input" value="${user.email}" disabled style="background:#f8fafc; cursor:not-allowed;">
+                    <p style="font-size:0.75rem; color:var(--text-muted); margin-top:0.25rem;">Email cannot be changed</p>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Mobile Number</label>
+                    <input type="tel" id="profile-mobile" class="form-input" value="${user.mobile || ''}" placeholder="+216 XX XXX XXX">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Role</label>
+                    <input type="text" class="form-input" value="${user.role}" disabled style="background:#f8fafc; cursor:not-allowed;">
+                    <p style="font-size:0.75rem; color:var(--text-muted); margin-top:0.25rem;">Contact an admin to change your role</p>
+                </div>
+            </div>
+        `;
+
+        onSave = async () => {
+            const name = document.getElementById('profile-name').value.trim();
+            const mobile = document.getElementById('profile-mobile').value.trim();
+            const profilePicPreview = document.getElementById('profile-pic-preview');
+            let profilePicture = user.profilePicture;
+
+            // Check if profile picture was updated
+            if (profilePicPreview.tagName === 'IMG') {
+                profilePicture = profilePicPreview.src;
+            }
+
+            if (!name) {
+                alert("Name cannot be empty");
+                return false;
+            }
+
+            const updates = {
+                name,
+                mobile,
+                profilePicture,
+                avatar: name.substring(0, 2).toUpperCase(),
+                lastSeen: new Date().toISOString()
+            };
+
+            // Update in Firestore
+            await store.updateUser(user.email, updates);
+            await auth.updateUser(user.email, updates);
+
+            // Update current session
+            const updatedUser = { ...user, ...updates };
+            localStorage.setItem('leo_current_user', JSON.stringify(updatedUser));
+
+            // Update saved accounts
+            let saved = JSON.parse(localStorage.getItem('leo_saved_accounts')) || [];
+            const idx = saved.findIndex(s => s.email === user.email);
+            if (idx !== -1) {
+                saved[idx] = { ...saved[idx], ...updates };
+                localStorage.setItem('leo_saved_accounts', JSON.stringify(saved));
+            }
+
+            location.reload();
+        };
     }
     else if (type === 'gallery') {
         title = 'Post to Gallery';
@@ -1454,6 +1641,30 @@ window.previewImage = (input) => {
                 const p = document.querySelector('.image-preview-area p');
                 if (icon) icon.style.display = 'none';
                 if (p) p.style.display = 'none';
+            }
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+};
+
+window.previewProfilePicture = (input) => {
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const preview = document.getElementById('profile-pic-preview');
+            if (preview) {
+                if (preview.tagName === 'SPAN') {
+                    // Replace span with img
+                    const img = document.createElement('img');
+                    img.id = 'profile-pic-preview';
+                    img.src = e.target.result;
+                    img.style.width = '100%';
+                    img.style.height = '100%';
+                    img.style.objectFit = 'cover';
+                    preview.parentElement.replaceChild(img, preview);
+                } else {
+                    preview.src = e.target.result;
+                }
             }
         };
         reader.readAsDataURL(input.files[0]);
