@@ -42,6 +42,10 @@
                     <input type="email" id="email" class="form-input" placeholder="name@example.com" required>
                 </div>
                 <div class="form-group">
+                    <label class="form-label">Mobile Number</label>
+                    <input type="tel" id="mobile" class="form-input" placeholder="+216 XX XXX XXX">
+                </div>
+                <div class="form-group">
                     <label class="form-label">Password</label>
                     <input type="password" id="password" class="form-input" placeholder="••••••••" required>
                 </div>
@@ -67,12 +71,13 @@
             const btn = document.getElementById('signup-btn');
             const name = document.getElementById('name').value;
             const email = document.getElementById('email').value;
+            const mobile = document.getElementById('mobile').value;
             const password = document.getElementById('password').value;
 
             btn.disabled = true;
             btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Registering...';
 
-            const result = await auth.register(name, email, password);
+            const result = await auth.register(name, email, password, true, mobile);
             if (result.success) {
                 window.location.href = 'index.html';
             } else {

@@ -1275,6 +1275,10 @@ window.dispatchModal = (type, id = null, options = {}) => {
                         <input type="email" id="u-email" class="form-input" value="${user ? user.email : ''}" ${id ? 'disabled' : ''} required>
                     </div>
                     <div class="form-group">
+                        <label class="form-label">Mobile Number</label>
+                        <input type="tel" id="u-mobile" class="form-input" value="${user ? (user.mobile || '') : ''}" placeholder="+216 XX XXX XXX">
+                    </div>
+                    <div class="form-group">
                         <label class="form-label">Role</label>
                         <select id="u-role" class="form-input">
                             <option value="Volunteer" ${user?.role === 'Volunteer' ? 'selected' : ''}>Volunteer</option>
@@ -1311,12 +1315,13 @@ window.dispatchModal = (type, id = null, options = {}) => {
             }
 
             const role = document.getElementById('u-role').value;
+            const mobile = document.getElementById('u-mobile').value.trim();
             const permissions = {};
             document.querySelectorAll('.u-perm').forEach(cb => {
                 permissions[cb.getAttribute('data-page')] = cb.checked;
             });
 
-            const userUpdates = { name, role, permissions };
+            const userUpdates = { name, role, permissions, mobile };
 
             if (id) {
                 await store.updateUser(id, userUpdates);

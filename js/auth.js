@@ -137,7 +137,7 @@ export const auth = {
         }
     },
 
-    register: async (name, email, password, switchSession = true) => {
+    register: async (name, email, password, switchSession = true, mobile = '') => {
         try {
             // Check if this is the first user ever (Bootstrap Admin)
             const usersSnap = await getDocs(collection(db, "users"));
@@ -150,6 +150,7 @@ export const auth = {
                 id: Date.now(),
                 name,
                 email: email.toLowerCase(),
+                mobile: mobile || '',
                 role: isFirstUser ? 'Admin' : 'Volunteer',
                 status: 'active',
                 avatar: name.substring(0, 2).toUpperCase(),
