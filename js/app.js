@@ -1070,9 +1070,16 @@ function renderMembers(container) {
                         <i class="fa-solid fa-envelope" style="color:var(--primary); width:20px;"></i>
                         <span style="color:var(--text-muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${u.email}</span>
                     </div>
-                    <div style="display:flex; align-items:center; gap:0.5rem; font-size:0.85rem;">
-                        <i class="fa-solid fa-phone" style="color:var(--primary); width:20px;"></i>
-                        <span style="color:var(--text-muted);">${mobile}</span>
+                    <div style="display:flex; align-items:center; justify-content:space-between; gap:0.5rem; font-size:0.85rem;">
+                        <div style="display:flex; align-items:center; gap:0.5rem; flex:1; min-width:0;">
+                            <i class="fa-solid fa-phone" style="color:var(--primary); width:20px;"></i>
+                            <span style="color:var(--text-muted); overflow:hidden; text-overflow:ellipsis;">${mobile}</span>
+                        </div>
+                        ${mobile && mobile !== 'Not provided' ? `
+                            <a href="tel:${mobile}" class="btn btn-secondary" style="padding:0.4rem 0.8rem; font-size:0.75rem; text-decoration:none; white-space:nowrap;" title="Call ${u.name}">
+                                <i class="fa-solid fa-phone"></i> Call
+                            </a>
+                        ` : ''}
                     </div>
                     <div style="display:flex; align-items:center; gap:0.5rem; font-size:0.85rem;">
                         <i class="fa-solid fa-clock" style="color:${isOnline ? '#34c759' : 'var(--text-muted)'}; width:20px;"></i>
