@@ -27,8 +27,12 @@ document.addEventListener('DOMContentLoaded', () => {
         avatarEl.textContent = currentUser.avatar;
     }
 
-    // Profile Click Handler
-    document.getElementById('user-profile-section').addEventListener('click', () => {
+    // Profile Click Handler (exclude button clicks)
+    document.getElementById('user-profile-section').addEventListener('click', (e) => {
+        // Don't open profile modal if clicking on action buttons
+        if (e.target.closest('.user-actions') || e.target.closest('button')) {
+            return;
+        }
         window.dispatchModal('my-profile');
     });
 
@@ -1077,6 +1081,17 @@ function renderMembers(container) {
                 </div>
 
                 ${u.status === 'active' ? '<span class="badge success" style="align-self:center;">Active</span>' : '<span class="badge danger" style="align-self:center;">Inactive</span>'}
+                
+                ${currentUser.role === 'Admin' ? `
+                    <div style="display:flex; gap:0.5rem; margin-top:0.5rem;">
+                        <button onclick="window.dispatchModal('user', '${u.id || u.email}')" class="btn btn-secondary" style="flex:1; justify-content:center; font-size:0.85rem; padding:0.6rem;">
+                            <i class="fa-solid fa-user-pen"></i> Edit
+                        </button>
+                        <button onclick="window.deleteUserAction('${u.id || u.email}')" class="btn btn-secondary" style="flex:1; justify-content:center; font-size:0.85rem; padding:0.6rem; color:var(--danger); border-color:rgba(198,40,40,0.2);">
+                            <i class="fa-solid fa-trash"></i> Delete
+                        </button>
+                    </div>
+                ` : ''}
             </div>
             `;
         }).join('');
