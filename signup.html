@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Up - LEO Club Curubis Korba</title>
+    <link rel="icon" type="image/png" href="img/logo.png">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/main.css">
+    <!-- Firebase SDK Mapping -->
+    <script type="importmap">
+        {
+          "imports": {
+            "firebase/app": "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js",
+            "firebase/auth": "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js",
+            "firebase/firestore": "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js",
+            "firebase/storage": "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js"
+          }
+        }
+    </script>
+    <script>window.onerror = function (m, u, l) { alert("Error: " + m + " at " + u + ":" + l); };</script>
+</head>
+
+<body>
+    <div class="auth-container">
+        <div class="auth-card">
+            <div class="auth-logo" style="background: none; padding: 0;">
+                <img src="img/logo.png" alt="LEO Logo" style="width: 100%; height: 100%; object-fit: contain;">
+            </div>
+            <h1 class="auth-title">Create Account</h1>
+            <p class="auth-subtitle">Join us to help the community</p>
+
+            <form id="signup-form">
+                <div class="form-group">
+                    <label class="form-label">Full Name</label>
+                    <input type="text" id="name" class="form-input" placeholder="John Doe" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Email Address</label>
+                    <input type="email" id="email" class="form-input" placeholder="name@example.com" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Password</label>
+                    <input type="password" id="password" class="form-input" placeholder="••••••••" required>
+                </div>
+                <button type="submit" id="signup-btn" class="btn btn-primary" style="width: 100%;">Create
+                    Account</button>
+            </form>
+
+            <div class="auth-divider">OR</div>
+
+            <button type="button" id="google-btn" class="btn btn-google">
+                <i class="fa-brands fa-google"></i> Sign up with Google
+            </button>
+
+            <a href="login.html" class="auth-link">Already have an account? Sign in</a>
+        </div>
+    </div>
+
+    <script type="module">
+        import { auth } from './js/auth.js';
+
+        document.getElementById('signup-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('signup-btn');
+            const name = document.getElementById('name').value;
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Registering...';
+
+            const result = await auth.register(name, email, password);
+            if (result.success) {
+                window.location.href = 'index.html';
+            } else {
+                btn.disabled = false;
+                btn.innerHTML = 'Create Account';
+                alert("Sign Up Error: " + result.message);
+            }
+        });
+
+        document.getElementById('google-btn').addEventListener('click', async () => {
+            const btn = document.getElementById('google-btn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Connecting...';
+
+            const result = await auth.loginWithGoogle();
+            if (result.success) {
+                window.location.href = 'index.html';
+            } else {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-brands fa-google"></i> Sign up with Google';
+                if (result.message !== "Login popup was closed.") {
+                    alert("Google Login Failed: " + result.message);
+                }
+            }
+        });
+    </script>
+</body>
+
+</html>
