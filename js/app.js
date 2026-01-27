@@ -1,5 +1,6 @@
 import { Store } from './store.js';
 import { auth } from './auth.js';
+import { uploadImage, deleteImage, previewImageFile } from './utils.js';
 import { translations } from './translations.js';
 
 let currentLang = localStorage.getItem('leo_lang') || 'en';
@@ -1406,44 +1407,57 @@ window.dispatchModal = (type, id = null, options = {}) => {
         onSave = async () => {
             const name = document.getElementById('profile-name').value.trim();
             const mobile = document.getElementById('profile-mobile').value.trim();
-            const profilePicPreview = document.getElementById('profile-pic-preview');
+            const profilePicInput = document.getElementById('profile-pic-input');
             let profilePicture = user.profilePicture;
-
-            // Check if profile picture was updated
-            if (profilePicPreview.tagName === 'IMG') {
-                profilePicture = profilePicPreview.src;
-            }
 
             if (!name) {
                 alert("Name cannot be empty");
                 return false;
             }
 
-            const updates = {
-                name,
-                mobile,
-                profilePicture,
-                avatar: name.substring(0, 2).toUpperCase(),
-                lastSeen: new Date().toISOString()
-            };
+            try {
+                // Check if a new profile picture was uploaded
+                if (profilePicInput.files && profilePicInput.files[0]) {
+                    // Delete old profile picture if exists
+                    if (user.profilePicture) {
+                        await deleteImage(user.profilePicture);
+                    }
 
-            // Update in Firestore
-            await store.updateUser(user.email, updates);
-            await auth.updateUser(user.email, updates);
+                    // Upload new profile picture to Firebase Storage
+                    const file = profilePicInput.files[0];
+                    profilePicture = await uploadImage(file, `profile-pictures/${user.email}`);
+                }
 
-            // Update current session
-            const updatedUser = { ...user, ...updates };
-            localStorage.setItem('leo_current_user', JSON.stringify(updatedUser));
+                const updates = {
+                    name,
+                    mobile,
+                    profilePicture,
+                    avatar: name.substring(0, 2).toUpperCase(),
+                    lastSeen: new Date().toISOString()
+                };
 
-            // Update saved accounts
-            let saved = JSON.parse(localStorage.getItem('leo_saved_accounts')) || [];
-            const idx = saved.findIndex(s => s.email === user.email);
-            if (idx !== -1) {
-                saved[idx] = { ...saved[idx], ...updates };
-                localStorage.setItem('leo_saved_accounts', JSON.stringify(saved));
+                // Update in Firestore
+                await store.updateUser(user.email, updates);
+                await auth.updateUser(user.email, updates);
+
+                // Update current session
+                const updatedUser = { ...user, ...updates };
+                localStorage.setItem('leo_current_user', JSON.stringify(updatedUser));
+
+                // Update saved accounts
+                let saved = JSON.parse(localStorage.getItem('leo_saved_accounts')) || [];
+                const idx = saved.findIndex(s => s.email === user.email);
+                if (idx !== -1) {
+                    saved[idx] = { ...saved[idx], ...updates };
+                    localStorage.setItem('leo_saved_accounts', JSON.stringify(saved));
+                }
+
+                location.reload();
+            } catch (error) {
+                console.error('Error saving profile:', error);
+                alert('Error saving profile: ' + error.message);
+                return false;
             }
-
-            location.reload();
         };
     }
     else if (type === 'gallery') {
@@ -1473,20 +1487,34 @@ window.dispatchModal = (type, id = null, options = {}) => {
             </div>
         `;
         onSave = async () => {
-            const imgSrc = document.getElementById('g-preview').src;
+            const imageInput = document.getElementById('g-image');
             const desc = document.getElementById('g-desc').value;
             const event = document.getElementById('g-event').value;
-            if (!imgSrc || imgSrc.startsWith('window')) return alert('Please select a photo');
 
-            await store.addGalleryImage({
-                id: Date.now(),
-                image: imgSrc,
-                description: desc || 'Memory from LEO Club',
-                event: event,
-                user: currentUser ? currentUser.name : 'Unknown User',
-                date: new Date().toLocaleDateString('en-GB')
-            });
-            renderPage('gallery');
+            if (!imageInput.files || !imageInput.files[0]) {
+                return alert('Please select a photo');
+            }
+
+            try {
+                // Upload image to Firebase Storage
+                const file = imageInput.files[0];
+                const postId = Date.now();
+                const imageUrl = await uploadImage(file, `gallery/${postId}`);
+
+                await store.addGalleryImage({
+                    id: postId,
+                    image: imageUrl,
+                    description: desc || 'Memory from LEO Club',
+                    event: event,
+                    user: currentUser ? currentUser.name : 'Unknown User',
+                    date: new Date().toLocaleDateString('en-GB')
+                });
+                renderPage('gallery');
+            } catch (error) {
+                console.error('Error uploading gallery image:', error);
+                alert('Error uploading image: ' + error.message);
+                return false;
+            }
         };
     } else if (type === 'switch-account') {
         title = t('switch_account');
@@ -1678,27 +1706,29 @@ window.previewImage = (input) => {
     }
 };
 
-window.previewProfilePicture = (input) => {
+window.previewProfilePicture = async (input) => {
     if (input.files && input.files[0]) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
+        try {
+            const dataUrl = await previewImageFile(input.files[0]);
             const preview = document.getElementById('profile-pic-preview');
             if (preview) {
                 if (preview.tagName === 'SPAN') {
                     // Replace span with img
                     const img = document.createElement('img');
                     img.id = 'profile-pic-preview';
-                    img.src = e.target.result;
+                    img.src = dataUrl;
                     img.style.width = '100%';
                     img.style.height = '100%';
                     img.style.objectFit = 'cover';
                     preview.parentElement.replaceChild(img, preview);
                 } else {
-                    preview.src = e.target.result;
+                    preview.src = dataUrl;
                 }
             }
-        };
-        reader.readAsDataURL(input.files[0]);
+        } catch (error) {
+            console.error('Error previewing image:', error);
+            alert('Error previewing image: ' + error.message);
+        }
     }
 };
 
