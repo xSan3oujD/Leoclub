@@ -9,6 +9,18 @@ import {
 } from "firebase/auth";
 import { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, getDocs } from "firebase/firestore";
 
+const isFirstUser = async () => {
+    try {
+        const usersSnap = await getDocs(collection(db, "users"));
+        return usersSnap.empty;
+    } catch (error) {
+        if (error?.code === 'permission-denied') {
+            return true;
+        }
+        throw error;
+    }
+};
+
 export const auth = {
     login: async (email, password) => {
         try {
@@ -94,14 +106,13 @@ export const auth = {
                 userData.lastSeen = new Date().toISOString();
             } else {
                 // Check if this is the first user ever (Bootstrap Admin)
-                const usersSnap = await getDocs(collection(db, "users"));
-                const isFirstUser = usersSnap.empty;
+                const isBootstrapUser = await isFirstUser();
 
                 userData = {
                     id: Date.now(),
                     name: fbUser.displayName || fbUser.email.split('@')[0],
                     email: fbUser.email.toLowerCase(),
-                    role: (isMasterAdmin || isFirstUser) ? 'Admin' : 'Volunteer',
+                    role: (isMasterAdmin || isBootstrapUser) ? 'Admin' : 'Volunteer',
                     avatar: fbUser.photoURL || (fbUser.displayName || fbUser.email).substring(0, 2).toUpperCase(),
                     profilePicture: fbUser.photoURL || null,
                     status: 'active',
@@ -140,8 +151,7 @@ export const auth = {
     register: async (name, email, password, switchSession = true, mobile = '') => {
         try {
             // Check if this is the first user ever (Bootstrap Admin)
-            const usersSnap = await getDocs(collection(db, "users"));
-            const isFirstUser = usersSnap.empty;
+            const isBootstrapUser = await isFirstUser();
 
             const userCredential = await createUserWithEmailAndPassword(fbAuth, email, password);
             const fbUser = userCredential.user;
@@ -151,7 +161,7 @@ export const auth = {
                 name,
                 email: email.toLowerCase(),
                 mobile: mobile || '',
-                role: isFirstUser ? 'Admin' : 'Volunteer',
+                role: isBootstrapUser ? 'Admin' : 'Volunteer',
                 status: 'active',
                 avatar: name.substring(0, 2).toUpperCase(),
                 permissions: {},
@@ -173,7 +183,16 @@ export const auth = {
             }
             return { success: true, user: userData };
         } catch (error) {
-            return { success: false, message: error.message };
+            console.error("Register Error:", error.code, error.message);
+            let msg = error.message || "Sign-up failed.";
+            if (error.code === 'permission-denied') {
+                msg = "Firestore permission denied. Update your Firebase security rules to allow authenticated users to write to the users collection.";
+            }
+            if (error.code === 'auth/email-already-in-use') msg = "This email is already registered.";
+            if (error.code === 'auth/weak-password') msg = "Password should be at least 6 characters.";
+            if (error.code === 'auth/invalid-email') msg = "Invalid email format.";
+            if (error.code === 'auth/network-request-failed') msg = "Network error. Check your connection.";
+            return { success: false, message: msg };
         }
     },
 
